@@ -52,6 +52,30 @@ internal static class SmokeHarness
             Check("Cancellation is explicit", window.StatusText.Text.Contains("annullato"));
             Check("Cancelled scan does not export incomplete data", !window.ExportButton.IsEnabled);
             await window.ScanAsync(false);
+            window.Tabs.SelectedIndex = 2;
+            Check("DriverPack tab has its own controls", window.FilterToolbar.Visibility == Visibility.Collapsed && !window.InstallPackButton.IsEnabled);
+            window.UpdateLayout();
+            await window.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+            Capture(window, Path.Combine(outputDirectory, "cosmodriver-driverpacks.png"));
+            window.Tabs.SelectedIndex = 3;
+            Check("Restore point control is available without automatic mutation", window.CreateRestoreButton.IsEnabled);
+            window.UpdateLayout();
+            await window.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+            Capture(window, Path.Combine(outputDirectory, "cosmodriver-restore.png"));
+            // Scan a genuine Windows INF on real devices. This API path never installs or stages a driver.
+            string fixtures = Path.Combine(Path.GetTempPath(), "CosmoDriver-INF-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(fixtures);
+            try
+            {
+                string systemInf = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "INF", "machine.inf");
+                File.Copy(systemInf, Path.Combine(fixtures, "machine.inf"), overwrite: true);
+                var candidates = await Task.Run(() => LocalDriverPacks.Scan(fixtures));
+                Check("Real SetupAPI matches an inbox INF against present devices", candidates.Count > 0);
+                Check("All local candidates carry confirmed hardware identity and file hashes", candidates.All(c => !string.IsNullOrWhiteSpace(c.DeviceId) && c.InfSha256.Length == 64));
+                await window.AnalyzePacksAsync(fixtures);
+                Check("DriverPack scan populates real candidate table", window.PacksGrid.Items.Count > 0);
+            }
+            finally { Directory.Delete(fixtures,true); }
+            window.Tabs.SelectedIndex = 0;
             window.Width = 1000; window.Height = 720;
             window.UpdateLayout();
             await window.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);

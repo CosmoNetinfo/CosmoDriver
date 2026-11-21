@@ -11,6 +11,10 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        if (e.Args.Length == 3 && e.Args[0] == "--export-brand")
+        {
+            Brand.Export(e.Args[1], e.Args[2]); Shutdown(); return;
+        }
         if (e.Args.Length == 2 && e.Args[0] == "--install-worker")
         {
             Shutdown(DriverInstaller.RunWorker(e.Args[1]));

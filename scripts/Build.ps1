@@ -1,4 +1,4 @@
-param([string]$Version = '0.1.0')
+param([string]$Version = '0.2.0')
 $ErrorActionPreference = 'Stop'
 if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid version' }
 if ((Get-Content src/CosmoDriver.Core/UpdateTrust.cs -Raw) -notmatch ('new\(' + ($Version.Replace('.', ', ')) + '\)')) { throw 'UpdateTrust.CurrentVersion must match release version' }

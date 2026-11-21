@@ -9,7 +9,7 @@ public sealed record ReleaseManifest(string Version, string FileName, string Sha
 public static class UpdateTrust
 {
     public const string Repository = "CosmoNetinfo/CosmoDriver";
-    public static Version CurrentVersion => new(0, 1, 0);
+    public static Version CurrentVersion => new(0, 2, 0);
 
     public static ReleaseManifest VerifyManifest(byte[] data, byte[] signature)
     {

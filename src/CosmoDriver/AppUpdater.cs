@@ -15,7 +15,7 @@ internal static class AppUpdater
     private static HttpClient CreateClient()
     {
         var client = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("CosmoDriver/0.1.0");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("CosmoDriver/0.2.0");
         return client;
     }
 

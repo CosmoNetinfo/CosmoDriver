@@ -12,7 +12,15 @@ namespace CosmoDriver;
 
 internal static class DriverInstaller
 {
-    public static bool Confirm(Window owner, DriverUpdate update)
+    public static bool Confirm(Window owner, DriverUpdate update, out bool restore) => ConfirmDetails(owner, update.Title,
+        "Windows Update scaricherà e installerà il driver selezionato. Potrebbero verificarsi brevi interruzioni dei dispositivi. Salva il lavoro; il riavvio non sarà automatico.", update.Eula, out restore);
+
+    public static bool ConfirmPackage(Window owner, PackCandidate candidate, out bool restore) => ConfirmDetails(owner,
+        candidate.Description + " · " + candidate.Version,
+        $"Dispositivo: {candidate.DeviceName}\nFirmatario: {candidate.Signer}\n\nWindows aggiungerà il pacchetto e lo applicherà ai dispositivi compatibili solo se migliore. Nessun downgrade forzato o riavvio automatico.",
+        "Il driver e i file associati provengono dalla cartella che hai selezionato. Assicurati di averli ottenuti da una fonte attendibile e di accettarne la licenza del produttore.", out restore);
+
+    private static bool ConfirmDetails(Window owner, string title, string details, string terms, out bool restore)
     {
         var dialog = new Window { Title = "Conferma aggiornamento driver", Owner = owner, Width = 620, Height = 550, MinWidth = 500, MinHeight = 450,
             WindowStartupLocation = WindowStartupLocation.CenterOwner, Background = System.Windows.Media.Brushes.White, FontFamily = owner.FontFamily };
@@ -22,14 +30,15 @@ internal static class DriverInstaller
         grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        var heading = new TextBlock { Text = "Installa questo aggiornamento?\n\n" + update.Title +
-            "\n\nWindows Update scaricherà e installerà il driver selezionato. Potrebbero verificarsi brevi interruzioni dei dispositivi. Salva il lavoro; il riavvio non sarà automatico.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0,0,0,16) };
+        var heading = new TextBlock { Text = "Installa questo aggiornamento?\n\n" + title + "\n\n" + details, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0,0,0,16) };
         grid.Children.Add(heading);
-        var eula = new TextBox { Text = string.IsNullOrWhiteSpace(update.Eula) ? "Windows Update non ha fornito termini di licenza aggiuntivi per questa proposta." : update.Eula,
+        var eula = new TextBox { Text = string.IsNullOrWhiteSpace(terms) ? "Windows Update non ha fornito termini di licenza aggiuntivi per questa proposta." : terms,
             IsReadOnly = true, TextWrapping = TextWrapping.Wrap, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Margin = new Thickness(0,0,0,16), Padding = new Thickness(10) };
         Grid.SetRow(eula, 1); grid.Children.Add(eula);
         var consent = new CheckBox { Content = "Ho salvato il lavoro e accetto i termini qui riportati.", Margin = new Thickness(0,0,0,16) };
-        Grid.SetRow(consent, 2); grid.Children.Add(consent);
+        var protection = new CheckBox { Content = "Crea prima un punto di ripristino (se fallisce, non installare).", IsChecked = true, Margin = new Thickness(0,0,0,12) };
+        var consentPanel = new StackPanel(); consentPanel.Children.Add(protection); consentPanel.Children.Add(consent);
+        Grid.SetRow(consentPanel, 2); grid.Children.Add(consentPanel);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
         var cancel = new Button { Content = "Annulla", IsCancel = true, Padding = new Thickness(16,10,16,10), Margin = new Thickness(0,0,10,0) };
         var install = new Button { Content = "Autorizza e installa", IsEnabled = false, Padding = new Thickness(16,10,16,10) };
@@ -37,13 +46,22 @@ internal static class DriverInstaller
         install.Click += (_, _) => dialog.DialogResult = true;
         actions.Children.Add(cancel); actions.Children.Add(install); Grid.SetRow(actions, 3); grid.Children.Add(actions);
         dialog.Content = grid;
-        return dialog.ShowDialog() == true;
+        bool confirmed = dialog.ShowDialog() == true;
+        restore = protection.IsChecked == true;
+        return confirmed;
     }
 
-    public static async Task<InstallResult> InstallAsync(DriverUpdate update)
+    public static Task<InstallResult> InstallAsync(DriverUpdate update, bool restore = true)
     {
         var request = new InstallRequest(update.UpdateId, update.Revision, InstallPolicy.EulaHash(update.Eula), true);
         InstallPolicy.Validate(request);
+        return RunAdminAsync(new("wua", request, CreateRestorePoint: restore));
+    }
+
+    public static async Task<InstallResult> RunAdminAsync(AdminRequest request)
+    {
+        string requestJson = JsonSerializer.Serialize(request);
+        if (requestJson.Length > 8 * 1024 * 1024) throw new InvalidDataException("Pacchetto con troppi metadati: seleziona una cartella più specifica.");
         string pipeName = "CosmoDriver.Install." + Guid.NewGuid().ToString("N");
         using var pipe = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
         var start = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = true, Verb = "runas" };
@@ -57,7 +75,7 @@ internal static class DriverInstaller
         await connection;
         using var writer = new StreamWriter(pipe, new UTF8Encoding(false), leaveOpen: true) { AutoFlush = true };
         using var reader = new StreamReader(pipe, Encoding.UTF8, leaveOpen: true);
-        await writer.WriteLineAsync(JsonSerializer.Serialize(request));
+        await writer.WriteLineAsync(requestJson);
         // Once installation starts, never terminate the WUA installer on cancellation or UI close.
         string? line = await reader.ReadLineAsync();
         return line is null || line.Length > 65536 ? new(false, false, "Installazione interrotta: controlla lo stato in Windows Update.") :
@@ -76,14 +94,13 @@ internal static class DriverInstaller
             pipe.Connect(45000);
             using var reader = new StreamReader(pipe, Encoding.UTF8, leaveOpen: true);
             using var writer = new StreamWriter(pipe, new UTF8Encoding(false), leaveOpen: true) { AutoFlush = true };
-            string? line = reader.ReadLine();
-            if (line is null || line.Length > 65536) return 4;
+            string? line = ReadBoundedLine(reader, 8 * 1024 * 1024);
+            if (line is null) return 4;
             InstallResult result;
             try
             {
-                var request = JsonSerializer.Deserialize<InstallRequest>(line) ?? throw new InvalidDataException();
-                InstallPolicy.Validate(request);
-                result = InstallNative(request);
+                var request = JsonSerializer.Deserialize<AdminRequest>(line) ?? throw new InvalidDataException();
+                result = Execute(request);
             }
             catch (Exception ex) { result = new(false, false, Protocol.FriendlyError($"0x{ex.HResult:X8}")); }
             writer.WriteLine(JsonSerializer.Serialize(result));
@@ -92,7 +109,33 @@ internal static class DriverInstaller
         catch { return 5; }
     }
 
-    private static InstallResult InstallNative(InstallRequest request)
+    private static string? ReadBoundedLine(StreamReader reader, int limit)
+    {
+        var text = new StringBuilder(); int next;
+        while ((next = reader.Read()) != -1)
+        {
+            if (next == '\n') return text.ToString();
+            if (text.Length >= limit) throw new InvalidDataException("Richiesta troppo grande.");
+            text.Append((char)next);
+        }
+        return text.Length == 0 ? null : text.ToString();
+    }
+
+    private static InstallResult Execute(AdminRequest request)
+    {
+        if (request.Operation == "restore")
+        {
+            var point = RestorePoints.Create();
+            return new(point.Success, false, point.Message);
+        }
+        if (request.Operation == "pack" && request.Package is not null)
+            return LocalDriverPacks.Install(request.Package, request.CreateRestorePoint);
+        if (request.Operation != "wua" || request.WindowsUpdate is null) throw new InvalidDataException("Operazione non valida.");
+        InstallPolicy.Validate(request.WindowsUpdate);
+        return InstallNative(request.WindowsUpdate, request.CreateRestorePoint);
+    }
+
+    private static InstallResult InstallNative(InstallRequest request, bool restore)
     {
         dynamic session = Activator.CreateInstance(Type.GetTypeFromProgID("Microsoft.Update.Session", true)!)!;
         session.ClientApplicationID = "CosmoNet.CosmoDriver";
@@ -104,6 +147,11 @@ internal static class DriverInstaller
         string eula = (string?)update.EulaText ?? "";
         if (!InstallPolicy.EulaHash(eula).Equals(request.EulaSha256, StringComparison.OrdinalIgnoreCase))
             return new(false, false, "I termini di licenza sono cambiati. Ripeti la scansione e conferma nuovamente.");
+        if (restore)
+        {
+            var point = RestorePoints.Create();
+            if (!point.Success) return new(false, false, point.Message);
+        }
         if (!(bool)update.EulaAccepted) update.AcceptEula();
         dynamic collection = Activator.CreateInstance(Type.GetTypeFromProgID("Microsoft.Update.UpdateColl", true)!)!;
         collection.Add(update);

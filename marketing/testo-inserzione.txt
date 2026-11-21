@@ -1,0 +1,12 @@
+I driver del tuo PC, sotto controllo. 🚀
+
+CosmoDriver è l'app gratuita fornita da CosmoNet.info per Windows: controlla i driver installati, gestisci gli aggiornamenti proposti da Windows Update e analizza i pacchetti driver compatibili. Puoi anche creare un punto di ripristino prima di installare.
+
+Disponibile con installer e in versione portatile. Per il catalogo esteso dei DriverPack, l'app apre il motore originale SDIO in una finestra separata.
+
+Scaricalo gratis:
+https://github.com/CosmoNetinfo/CosmoDriver/releases/latest
+
+La disponibilità dipende da hardware, pacchetti e fonti supportate; non è garantito un aggiornamento per ogni driver.
+
+#CosmoDriver #CosmoNet #Windows #Driver #SoftwareGratuito

@@ -40,6 +40,10 @@ jobs:
       - name: Test installer e disinstallazione
         shell: pwsh
         run: ./scripts/Test-Packages.ps1
+      - name: Verifica fonte ufficiale SDIO (nessuna esecuzione)
+        continue-on-error: true
+        shell: pwsh
+        run: ./scripts/Test-SdioSource.ps1
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
@@ -48,6 +52,7 @@ jobs:
             artifacts/*.exe
             artifacts/*.zip
             artifacts/SHA256SUMS.txt
+            artifacts/sdio-source-results.json
             artifacts/smoke/
           if-no-files-found: error
   release:

@@ -20,10 +20,12 @@ public partial class MainWindow : Window
     private string? _pendingUpdate;
     private bool _restartAfterUpdate;
     private bool _installing;
+    private bool _closeAfterScan;
 
     public MainWindow(bool automaticStartup = true)
     {
         InitializeComponent();
+        BrandSymbol.Source = Brand.Symbol();
         DriversGrid.SelectionChanged += DeviceSelection_Changed;
         UpdatesGrid.SelectionChanged += DeviceSelection_Changed;
         if (automaticStartup)
@@ -58,7 +60,7 @@ public partial class MainWindow : Window
                 _updates = updates.Updates; _updatesAt = DateTimeOffset.Now;
                 _updateStatus = "Completato"; UpdateCount.Text = _updates.Count.ToString();
                 StatusText.Text = _updates.Count == 0 ? "Windows Update non propone aggiornamenti driver" : $"Windows Update propone {_updates.Count} aggiornamenti driver";
-                StatusDetail.Text = $"Controllo completato alle {_updatesAt:HH:mm}. Valuta le proposte nelle impostazioni di Windows.";
+                StatusDetail.Text = $"Controllo completato alle {_updatesAt:HH:mm}. Seleziona una proposta per leggere i termini e installare il driver.";
                 if (_updates.Count > 0) Tabs.SelectedIndex = 1;
             }
             else
@@ -79,7 +81,7 @@ public partial class MainWindow : Window
             StatusDetail.Text = ex is InvalidOperationException or TimeoutException ? ex.Message : "Impossibile leggere i dati di Windows. Riprova o verifica i servizi di sistema.";
             if (online) _updateStatus = "Non riuscito";
         }
-        finally { _scan = null; SetBusy(false); ApplyFilter(); }
+        finally { _scan = null; SetBusy(false); ApplyFilter(); if (_closeAfterScan) Close(); }
     }
 
     private void SetBusy(bool busy)
@@ -87,6 +89,8 @@ public partial class MainWindow : Window
         ScanButton.IsEnabled = RefreshButton.IsEnabled = !busy;
         ExportButton.IsEnabled = !busy && (_inventoryAt.HasValue || _updatesAt.HasValue);
         CancelButton.Visibility = BusyBar.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
+        ChoosePackButton.IsEnabled = SdioButton.IsEnabled = ImportSdioButton.IsEnabled = CreateRestoreButton.IsEnabled = !busy;
+        AnalyzePackButton.IsEnabled = !busy && _library is not null;
     }
 
     private void ApplyFilter()
@@ -98,6 +102,7 @@ public partial class MainWindow : Window
         var updates = _updates.Where(u => u.Title.Contains(query, StringComparison.OrdinalIgnoreCase) ||
             u.Manufacturer.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
         DriversGrid.ItemsSource = filtered; UpdatesGrid.ItemsSource = updates;
+        FilterToolbar.Visibility = InventoryFooter.Visibility = Tabs.SelectedIndex < 2 ? Visibility.Visible : Visibility.Collapsed;
         if (Tabs.SelectedIndex == 0)
             ListHint.Text = _inventoryAt.HasValue ? $"{filtered.Count} di {_drivers.Count} driver · La firma non indica se il driver è aggiornato. La data può essere intenzionalmente vecchia." : "Inventario non disponibile. Premi Rileggi driver.";
         else
@@ -117,10 +122,10 @@ public partial class MainWindow : Window
         if (_installing)
         {
             e.Cancel = true;
-            MessageBox.Show(this, "L'installazione del driver è in corso. Attendi il risultato prima di chiudere CosmoDriver.", "Installazione in corso", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, "L'operazione di Windows è in corso. Attendi il risultato prima di chiudere CosmoDriver.", "Operazione in corso", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
-        _scan?.Cancel();
+        if (_scan is not null) { e.Cancel = true; _closeAfterScan = true; _scan.Cancel(); return; }
         _lifetime.Cancel();
         if (_pendingUpdate is not null)
         {
@@ -153,10 +158,11 @@ public partial class MainWindow : Window
     private void DeviceSelection_Changed(object sender, SelectionChangedEventArgs e) => UpdateSelection();
     private void UpdateSelection()
     {
-        if (InstallButton is null || SupportButton is null) return;
+        if (InstallButton is null || SupportButton is null || InstallPackButton is null) return;
         InstallButton.Visibility = Tabs.SelectedIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
         SupportButton.Visibility = Tabs.SelectedIndex == 0 ? Visibility.Visible : Visibility.Collapsed;
         InstallButton.IsEnabled = !_installing && _scan is null && Tabs.SelectedIndex == 1 && _updatesAt.HasValue && UpdatesGrid.SelectedItem is DriverUpdate;
+        InstallPackButton.IsEnabled = !_installing && _scan is null && PacksGrid.SelectedItem is PackCandidate { Signed: true };
         SupportButton.IsEnabled = Tabs.SelectedIndex == 0 && DriversGrid.SelectedItem is DriverInfo selected && InstallPolicy.VendorSupport(selected.Provider) is not null;
     }
 
@@ -169,14 +175,14 @@ public partial class MainWindow : Window
 
     private async void Install_Click(object sender, RoutedEventArgs e)
     {
-        if (_scan is not null || _installing || UpdatesGrid.SelectedItem is not DriverUpdate selected || !DriverInstaller.Confirm(this, selected)) return;
+        if (_scan is not null || _installing || UpdatesGrid.SelectedItem is not DriverUpdate selected || !DriverInstaller.Confirm(this, selected, out bool restore)) return;
         _installing = true; SetBusy(true); UpdateSelection();
         CancelButton.Visibility = Visibility.Collapsed;
         StatusText.Text = "Installazione del driver tramite Windows Update…";
         StatusDetail.Text = "Conferma l'autorizzazione di Windows. Dopo l'avvio non interrompere l'installazione.";
         try
         {
-            var result = await DriverInstaller.InstallAsync(selected);
+            var result = await DriverInstaller.InstallAsync(selected, restore);
             StatusText.Text = result.Success ? "Driver installato" : "Installazione non completata";
             StatusDetail.Text = result.Message + (result.RebootRequired ? " È necessario riavviare il PC manualmente." : "");
             // Invalidate the old offer list even on failure: WUA can have changed device state.
@@ -203,7 +209,7 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog(this) != true) return;
         try
         {
-            var report = new ScanReport(DateTimeOffset.Now, _inventoryAt, _updatesAt, _updateStatus, _drivers.ToArray(), _updates.ToArray());
+            var report = new ScanReport(DateTimeOffset.Now, _inventoryAt, _updatesAt, _updateStatus, _drivers.ToArray(), _updates.ToArray(), _packCandidates.ToArray(), PackStatus.Text);
             await File.WriteAllTextAsync(dialog.FileName, JsonSerializer.Serialize(report, Protocol.JsonOptions));
             MessageBox.Show(this, "Rapporto salvato. Include l'intero inventario, anche con filtri attivi. Contiene nomi e versioni dei dispositivi: condividilo solo se lo desideri.", "Esportazione completata", MessageBoxButton.OK, MessageBoxImage.Information);
         }
@@ -211,6 +217,6 @@ public partial class MainWindow : Window
     }
 
     private void About_Click(object sender, RoutedEventArgs e) => MessageBox.Show(this,
-        "CosmoDriver 0.1.0 · by CosmoNet\n\nInventario locale tramite WMI. Verifica e installazione tramite Windows Update/WSUS configurato nel sistema, rispettando i criteri aziendali. L'installazione richiede selezione, conferma della licenza e autorizzazione amministrativa di Windows. Nessun riavvio automatico.\n\nNessuna telemetria, pubblicità, account o catalogo di terze parti. Il controllo non modifica i driver. L'aggiornamento automatico di CosmoDriver contatta GitHub e verifica firma e hash dei pacchetti prima di applicarli alla chiusura.\n\n" + ScanReport.Scope + "\n\nI collegamenti ai produttori riconosciuti aprono siti ufficiali nel browser; non attestano la disponibilità di una nuova versione. Un driver non firmato o datato non è automaticamente pericoloso o obsoleto. Il rapporto viene salvato solo su tua richiesta.",
+        "CosmoDriver 0.2.0 · by CosmoNet\n\nInventario locale tramite WMI. Verifica e installazione tramite Windows Update/WSUS configurato nel sistema, rispettando i criteri aziendali. L'installazione richiede selezione, conferma della licenza e autorizzazione amministrativa di Windows. Nessun riavvio automatico.\n\nNessuna telemetria, pubblicità o account. La modalità DriverPack verifica gli INF locali; il catalogo esteso usa SDIO in una finestra separata. Puoi creare un punto di ripristino: se richiesto e non verificato, nessuna installazione parte. Il controllo non modifica i driver. L'aggiornamento automatico di CosmoDriver contatta GitHub e verifica firma e hash dei pacchetti prima di applicarli alla chiusura.\n\n" + ScanReport.Scope + "\n\nI collegamenti ai produttori riconosciuti aprono siti ufficiali nel browser; non attestano la disponibilità di una nuova versione. Un driver non firmato o datato non è automaticamente pericoloso o obsoleto. Il rapporto viene salvato solo su tua richiesta.",
         "Informazioni e privacy", MessageBoxButton.OK, MessageBoxImage.Information);
 }

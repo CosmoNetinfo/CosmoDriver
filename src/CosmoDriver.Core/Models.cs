@@ -17,7 +17,8 @@ public sealed record InstallRequest(string UpdateId, int Revision, string EulaSh
 public sealed record InstallResult(bool Success, bool RebootRequired, string Message);
 public sealed record ProbeResult(bool Success, List<DriverInfo> Drivers, List<DriverUpdate> Updates, string? ErrorCode);
 public sealed record ScanReport(DateTimeOffset CreatedAt, DateTimeOffset? InventoryAt, DateTimeOffset? UpdatesAt,
-    string UpdateStatus, IReadOnlyList<DriverInfo> Drivers, IReadOnlyList<DriverUpdate> Updates)
+    string UpdateStatus, IReadOnlyList<DriverInfo> Drivers, IReadOnlyList<DriverUpdate> Updates,
+    IReadOnlyList<PackCandidate>? LocalCandidates = null, string LocalPackStatus = "Non verificato")
 {
     public const string Scope = "Fonte: Windows Update/WSUS configurato nel sistema. Nessun risultato non garantisce l'assenza di versioni sul sito del produttore. Le proposte non sono associate automaticamente ai dispositivi dell'inventario.";
     public string Coverage => Scope;

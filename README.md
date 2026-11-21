@@ -1,8 +1,17 @@
 # CosmoDriver · by CosmoNet
 
-Controlla i driver di Windows senza cataloghi di terze parti e senza modificare il sistema durante la scansione.
+Controlla i driver di Windows con Windows Update, pacchetti INF locali e accesso al catalogo SDIO. Nessuna modifica durante la scansione; installazioni con conferma esplicita.
 
 ![Interfaccia CosmoDriver](docs/cosmodriver-desktop.png)
+
+## Novità 0.2.0
+
+- **DriverPack locali:** compatibilità dei pacchetti INF verificata da Windows SetupAPI; hash dalla scansione alla copia protetta, verifica firma e installazione senza forzare driver peggiori.
+- **Catalogo SDIO:** download/importazione dello ZIP ufficiale verificato, avvio del motore originale Snappy Driver Installer Origin in finestra separata per indici, pacchetti online e offline.
+- **Punti di ripristino:** creazione manuale e opzione inizialmente attiva prima delle installazioni. Se richiesta e non verificata, l'installazione non parte.
+- Nuovo logo originale CosmoDriver, approvato e coordinato con CosmoNet: [SVG, PNG e anteprima](docs/brand/).
+
+Dettagli e limiti: [DriverPack, ripristino e fonti di terze parti](docs/DRIVERPACKS.md). Non è garantita la disponibilità di ogni driver del PC. Le modalità native e il motore SDIO restano chiaramente distinguibili.
 
 ## Download e utilizzo
 
@@ -40,6 +49,8 @@ La firma del manifest protegge gli aggiornamenti dentro l'app. **Non è una firm
 
 ## Privacy e sicurezza
 
+La modalità DriverPack locale legge anche i pacchetti selezionati. Il catalogo esteso scarica il pacchetto originale SDIO dal sito dell'autore, verificato tramite hash fissato nell'app; SDIO gestisce separatamente indici, DriverPack, log e traffico anche BitTorrent nella cartella scelta. La creazione di un punto di ripristino e l'installazione INF richiedono UAC. Leggi [comportamento e limiti](docs/DRIVERPACKS.md) prima dell'uso.
+
 Nessuna telemetria, pubblicità, account o servizio residente. La lettura WMI è locale; ricerca e installazione driver usano Windows Update. Nessuna modifica ai driver durante la scansione; l'installazione richiede una conferma esplicita. Il controllo automatico dell'app contatta GitHub API e gli host di download GitHub tramite HTTPS. Nessun inventario viene inviato a CosmoNet o a GitHub. Esporta un rapporto solo se desideri salvarlo e condividilo consapevolmente.
 
 La UI e le scansioni girano come utente corrente; solo il processo di installazione richiede UAC, dopo conferma. Il processo riceve un ID/revisione validati e l'hash dei termini accettati tramite named pipe limitata all'utente corrente. Non vengono avviati PowerShell o comandi provenienti dai dispositivi. Le scansioni hanno processi isolati, annullamento, timeout e limite alla risposta. Le risposte incomplete sono rifiutate. I pacchetti di autoupdate vengono verificati di nuovo immediatamente prima della sostituzione atomica; una copia precedente viene mantenuta.
@@ -67,7 +78,7 @@ Per una release: aggiorna `Directory.Build.props`, `UpdateTrust.CurrentVersion`,
 Per firmare manualmente:
 
 ```powershell
-./scripts/Sign-Release.ps1 -Version 0.1.0 -PrivateKeyPath 'percorso-esterno/update-private.pem'
+./scripts/Sign-Release.ps1 -Version 0.2.0 -PrivateKeyPath 'percorso-esterno/update-private.pem'
 ```
 
 Il workflow non esegue codice delle pull request con segreti o permessi di pubblicazione. Le release vengono create solo da tag `v*` appartenenti alla cronologia di `main`.

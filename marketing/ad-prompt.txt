@@ -1,0 +1,20 @@
+Use case: ads-marketing.
+Create one polished Italian promotional poster for CosmoDriver by CosmoNet.info, portrait 4:5, suitable for Instagram and Facebook. This is a finished advertisement, not a moodboard. Aim for 1080 x 1350 or equivalent high-resolution 4:5.
+
+References:
+1. The official CosmoNet mascot: preserve its identity, cyan round head, two antennae, huge dark galaxy/star eyes, friendly smile, blue zip-up astronaut hoodie, Italian patch and small planet badge. Remove the stopwatch; instead have the mascot presenting a sleek laptop with the app or gesturing toward the product. Do not redesign the face or replace it with a generic robot.
+2. The approved CosmoDriver brand board: preserve the C-shaped blue/cyan update arc, white microchip and blue orbit mark. Use the same CosmoDriver wordmark and the brand's navy, cyan and electric blue. Do not copy the board layout or include its explanatory headings.
+3. Real CosmoDriver Windows application screenshot: use as the screen content in the laptop, preserving its real interface appearance and four tabs. Do not invent charts, exaggerated counts or security guarantees. Keep it recognisable but secondary to the brand and mascot.
+
+Art direction: exceptionally clean premium software advertising with an approachable mascot. Deep navy background with a subtle atmospheric blue glow, one quiet orbital sweep connecting brand to product, crisp readable typography and generous spacing. Large brand at top, strong free-software message, mascot prominent in the lower/middle composition and a real product laptop beside it. Deliberate composition, no clutter, no fake review badges, no Microsoft logo, no stock circuits everywhere. Visual hierarchy must work on a phone.
+
+Exact visible Italian copy, render these words correctly and only these marketing lines:
+"CosmoDriver"
+"I driver del tuo PC, sotto controllo."
+"Scansione, aggiornamenti e punti di ripristino."
+"100% GRATUITO"
+"Fornito da CosmoNet.info"
+"Scaricalo gratis"
+"Per Windows · Installer e versione portatile"
+
+Give "100% GRATUITO" a highly visible cyan/blue contrasting badge or clear typography; keep the provider line fully readable. CTA is a designed button, not a fake clickable browser UI. No QR code, fake URL path, price, subscription, claim to update every driver or absolute safety promise. Keep all text, logo and mascot inside safe margins. Opaque finished poster background.
