@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <UseWPF>true</UseWPF>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets/CosmoDriver.ico</ApplicationIcon>
+    <Product>CosmoDriver by CosmoNet</Product>
+    <Description>Controllo driver Windows tramite Windows Update</Description>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+  <ItemGroup><ProjectReference Include="../CosmoDriver.Core/CosmoDriver.Core.csproj" /></ItemGroup>
+</Project>
