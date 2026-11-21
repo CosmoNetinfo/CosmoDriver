@@ -35,7 +35,7 @@ I driver di terze parti distribuiti su Windows Update sono inclusi. Per quelli d
 
 L'inventario elenca i driver Plug and Play esposti da `Win32_PnPSignedDriver`, non ogni driver del kernel. Le proposte di Windows Update sono mostrate separatamente: gli ID hardware non vengono usati per inventare corrispondenze non verificabili. **Nessuna proposta** significa solo che la fonte configurata non propone aggiornamenti; sul sito del produttore possono esistere altre versioni. Un errore, un annullamento o una risposta parziale non vengono presentati come sistema aggiornato.
 
-Ricerca per nome, produttore, classe, INF o versione; filtro per firma nell'inventario. L'esportazione JSON contiene l'intero risultato, con date separate di inventario e ricerca online, stato del controllo e limiti della copertura. Non contiene nome utente o nome del computer; nomi di dispositivi e ID hardware delle proposte possono comunque essere identificativi.
+Ricerca per nome, produttore, classe, INF o versione; filtro per firma nell'inventario. L'esportazione JSON contiene l'intero risultato, con date separate di inventario e ricerca online, stato del controllo e limiti della copertura. Quando includi candidati locali, il rapporto contiene anche i percorsi dei pacchetti, che possono includere nomi utente. Nomi dei dispositivi e ID hardware possono essere identificativi.
 
 ## Aggiornamenti automatici dell'app
 

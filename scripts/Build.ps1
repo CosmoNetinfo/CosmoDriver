@@ -10,9 +10,10 @@ dotnet publish src/CosmoDriver/CosmoDriver.csproj -c Release -r win-x64 --self-c
 if ($LASTEXITCODE) { throw 'Publish failed' }
 New-Item -ItemType Directory -Force artifacts | Out-Null
 Copy-Item -LiteralPath artifacts/publish/CosmoDriver.exe -Destination artifacts/CosmoDriver.exe -Force
+Copy-Item -LiteralPath marketing/CosmoDriver-pubblicita-CosmoNet.png -Destination artifacts/CosmoDriver-pubblicita-CosmoNet.png -Force
 Compress-Archive -Path artifacts/publish/CosmoDriver.exe,README.md,LICENSE -DestinationPath "artifacts/CosmoDriver-Portable-$Version-win-x64.zip" -Force
 $compiler = @("${env:ProgramFiles(x86)}/Inno Setup 6/ISCC.exe", "$env:ProgramFiles/Inno Setup 6/ISCC.exe") | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
 if (-not $compiler) { throw 'Inno Setup 6 is required' }
 & $compiler "/DAppVersion=$Version" installer/CosmoDriver.iss
 if ($LASTEXITCODE) { throw 'Installer build failed' }
-Get-ChildItem artifacts -File | Where-Object { $_.Extension -in '.exe','.zip' } | ForEach-Object { '{0}  {1}' -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash,$_.Name } | Set-Content artifacts/SHA256SUMS.txt
+Get-ChildItem artifacts -File | Where-Object { $_.Extension -in '.exe','.zip','.png' } | ForEach-Object { '{0}  {1}' -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash,$_.Name } | Set-Content artifacts/SHA256SUMS.txt

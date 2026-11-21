@@ -211,7 +211,7 @@ public partial class MainWindow : Window
         {
             var report = new ScanReport(DateTimeOffset.Now, _inventoryAt, _updatesAt, _updateStatus, _drivers.ToArray(), _updates.ToArray(), _packCandidates.ToArray(), PackStatus.Text);
             await File.WriteAllTextAsync(dialog.FileName, JsonSerializer.Serialize(report, Protocol.JsonOptions));
-            MessageBox.Show(this, "Rapporto salvato. Include l'intero inventario, anche con filtri attivi. Contiene nomi e versioni dei dispositivi: condividilo solo se lo desideri.", "Esportazione completata", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, "Rapporto salvato. Include l'intero inventario, anche con filtri attivi. Può contenere nomi dei dispositivi, ID hardware e percorsi locali: condividilo solo se lo desideri.", "Esportazione completata", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch { MessageBox.Show(this, "Impossibile salvare il rapporto. Verifica il percorso e i permessi della cartella.", "Esportazione non riuscita", MessageBoxButton.OK, MessageBoxImage.Error); }
     }

@@ -5,6 +5,8 @@
 - 62 test di logica/sicurezza superati: include consenso, snapshot SHA-256, INF cambiato dalla scansione, dipendenze cambiate, traversal, flussi NTFS, duplicati, dimensioni, annullamento, ZIP slip, link simbolici ZIP e blocco dell'installazione se il punto di ripristino richiesto non viene creato.
 - 19 controlli WMI/SetupAPI/UI superati: include matching reale di un INF inbox sui dispositivi presenti, popolamento della tabella DriverPack, stati dei pulsanti e schermate delle schede DriverPack/Ripristino.
 - Build Release con zero avvisi/errori; EXE x64 self-contained e installer Inno Setup 6 generati.
+- Installazione/disinstallazione del pacchetto 0.2.0, smoke test della copia installata e contenuto ZIP portatile verificati.
+- Autoupdate 0.2.0 verificato su copie isolate: firma, sostituzione atomica, backup, aggiornamento ripetuto e rifiuto payload manomesso.
 - Il nuovo logo viene renderizzato dalle stesse geometrie usate nell'app; icona ICO con sette dimensioni (16–256), SVG per sfondi chiari/scuri e PNG trasparenti.
 
 Il test WMI/SetupAPI non installa driver e non crea punti di ripristino. I fixture sono copie di INF pubblici di Windows; non includono file driver redistribuiti.

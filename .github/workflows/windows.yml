@@ -51,6 +51,7 @@ jobs:
           path: |
             artifacts/*.exe
             artifacts/*.zip
+            artifacts/*.png
             artifacts/SHA256SUMS.txt
             artifacts/sdio-source-results.json
             artifacts/smoke/
@@ -86,5 +87,5 @@ jobs:
           ./scripts/Test-AutoUpdate.ps1
           ./scripts/Sign-Release.ps1 -Version $env:RELEASE_TAG.Substring(1)
           $files = @(Get-ChildItem artifacts -File | ForEach-Object FullName)
-          gh release create $env:RELEASE_TAG @files --verify-tag --title "CosmoDriver $env:RELEASE_TAG" --notes "CosmoDriver by CosmoNet. Installer per utente e EXE portatile Windows x64. Aggiornamenti automatici verificati tramite manifest firmato. Consulta README per utilizzo, privacy e limiti della scansione. Gli EXE non hanno firma Authenticode."
+          gh release create $env:RELEASE_TAG @files --verify-tag --title "CosmoDriver $env:RELEASE_TAG" --notes "CosmoDriver gratuito by CosmoNet.info: Windows Update, pacchetti INF locali verificati e punti di ripristino con conferma UAC. Catalogo esteso tramite motore originale SDIO in finestra separata, con ZIP ufficiale verificato. Installer per utente, EXE portatile Windows x64, logo e pubblicita con mascotte. Aggiornamenti app con manifest firmato. Consulta README e docs/TESTING-0.2.0.md per copertura e limiti: installazione hardware e creazione effettiva dei punti da collaudare in ambiente dedicato; download SDIO soggetto a disponibilita della fonte. Gli EXE non hanno firma Authenticode."
           if ($LASTEXITCODE) { throw 'Release publication failed' }
